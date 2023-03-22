@@ -85,7 +85,7 @@ def varrer_dados(tombo):
     exemplar = str(driver.find_element(
         By.XPATH,
         f'//td[text()={item}]/following-sibling::*'
-    ).get_attribute('textContent').replace('\n', ''))
+    ).get_attribute('textContent').replace('\n', '').strip())
 
     return [titulo, autor, editora, ano, isbn, tombo, exemplar]
 
@@ -94,7 +94,7 @@ lista = [['TITULO', 'AUTOR', 'EDITORA', 'ANO', 'ISBN', 'TOMBO', 'EXEMPLAR']]
 
 # DRIVER
 options = Options()
-# options.add_argument('-headless')
+options.add_argument('-headless')
 driver = webdriver.Firefox(options=options)
 driver.implicitly_wait(5)
 
@@ -125,7 +125,7 @@ try:
     driver.find_element(By.CSS_SELECTOR, selector_guia_catalogo).click()
 
     for item in tombos:
-        # print(item)
+        print(item)
         driver.find_element(
             By.CSS_SELECTOR, selector_codigo_de_barras).send_keys(item)
         driver.find_element(By.CSS_SELECTOR, selector_botao_pesquisar).click()
