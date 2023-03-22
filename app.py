@@ -17,18 +17,6 @@ def checar_lista():
         return False
     return True
 
-
-def checar_tombo(tombo):
-    try:
-        driver.find_element(
-            By.XPATH,
-            f'//*[contains(text(),{tombo})]'
-        )
-    except NoSuchElementException:
-        return False
-    return True
-
-
 def checar_paginas(item):
     try:
         driver.find_element(
@@ -40,54 +28,62 @@ def checar_paginas(item):
     return True
 
 
-def checar_livro(links, tombo):
+def checar_livro(links, tombo, lista):
     for item in links:
         try:
             driver.get(item)
 
-            driver.find_element(
-                By.XPATH,
-                f'//td[text()={tombo}]'
-            )
+            cod = driver.find_element(
+                By.XPATH, f'//*[contains(text(), {tombo})]')
+            cod = cod.get_attribute('textContent').strip().replace('\n', '')
+
+            if cod == str(tombo):
+                lista.append(varrer_dados(tombo))
+            else:
+                continue
+
         except NoSuchElementException:
             continue
-        return True
 
 
 def varrer_dados(tombo):
-    titulo = str(driver.find_element(
-        By.XPATH,
-        '//*[contains(text(),"Título:")]/following-sibling::*'
-    ).get_attribute('textContent').strip().replace('\n', ''))
+    try:
+        titulo = str(driver.find_element(
+            By.XPATH,
+            '//*[contains(text(),"Título:")]/following-sibling::*'
+        ).get_attribute('textContent').strip().replace('\n', ''))
 
-    autor = str(driver.find_element(
-        By.XPATH,
-        '//*[contains(text(),"Personal name:")]/following-sibling::*'
-    ).get_attribute('textContent').strip().replace('\n', ''))
+        autor = str(driver.find_element(
+            By.XPATH,
+            '//*[contains(text(),"Personal name:")]/following-sibling::*'
+        ).get_attribute('textContent').strip().replace('\n', ''))
 
-    editora = str(driver.find_element(
-        By.XPATH,
-        '//*[contains(text(),"Name of publisher, distributor, etc.:")]/following-sibling::*'
-    ).get_attribute('textContent').strip().replace('\n', ''))
+        editora = str(driver.find_element(
+            By.XPATH,
+            '//*[contains(text(),"Name of publisher, distributor, etc.:")]/following-sibling::*'
+        ).get_attribute('textContent').strip().replace('\n', ''))
 
-    ano = str(driver.find_element(
-        By.XPATH,
-        '//*[contains(text(),"Date of publication, distribution, etc.:")]/following-sibling::*'
-    ).get_attribute('textContent').strip().replace('\n', ''))
+        ano = str(driver.find_element(
+            By.XPATH,
+            '//*[contains(text(),"Date of publication, distribution, etc.:")]/following-sibling::*'
+        ).get_attribute('textContent').strip().replace('\n', ''))
 
-    isbn = str(driver.find_element(
-        By.XPATH,
-        '//*[contains(text(),"International Standard Book Number:")]/following-sibling::*'
-    ).get_attribute('textContent').strip())
+        isbn = str(driver.find_element(
+            By.XPATH,
+            '//*[contains(text(),"International Standard Book Number:")]/following-sibling::*'
+        ).get_attribute('textContent').strip())
 
-    item = str(tombo)
+        item = str(tombo)
 
-    exemplar = str(driver.find_element(
-        By.XPATH,
-        f'//td[text()={item}]/following-sibling::*'
-    ).get_attribute('textContent').replace('\n', '').strip())
+        exemplar = str(driver.find_element(
+            By.XPATH,
+            f'//*[contains(text(), "{item}")]/following-sibling::*'
+        ).get_attribute('textContent').strip().replace('\n', ''))
 
-    return [titulo, autor, editora, ano, isbn, tombo, exemplar]
+        return [titulo, autor, editora, ano, isbn, tombo, exemplar]
+
+    except NoSuchElementException:
+        return ['--- ERRO NA VARREDURA ---', '', '', '', '', item, '']
 
 
 lista = [['TITULO', 'AUTOR', 'EDITORA', 'ANO', 'ISBN', 'TOMBO', 'EXEMPLAR']]
@@ -100,7 +96,11 @@ driver.implicitly_wait(5)
 
 try:
     # LISTA
-    tombos = pandas.read_csv('tombos.csv', dtype=str).squeeze('columns')
+    tombos = pandas.read_csv(
+        'tombos.csv',
+        dtype=str,
+        header=None
+    ).squeeze('columns')
 
     # LOGIN
     load_dotenv()
@@ -112,23 +112,28 @@ try:
     selector_senha = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(5) > font.primary > center > form > table > tbody > tr:nth-child(2) > td > table > tbody > tr:nth-child(2) > td:nth-child(2) > input[type=password]'
     selector_botao_login = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(5) > font.primary > center > form > table > tbody > tr:nth-child(2) > td > table > tbody > tr:nth-child(3) > td > input'
     selector_botao_logout = '.navbutton'
-    selector_guia_catalogo = 'body > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(10) > a'
     selector_codigo_de_barras = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(5) > font.primary > form:nth-child(3) > table > tbody > tr:nth-child(2) > td > input[type=text]:nth-child(1)'
     selector_botao_pesquisar = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(5) > font.primary > form:nth-child(3) > table > tbody > tr:nth-child(2) > td > input.button'
-    selector_guia_pesquisa = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(2) > font > a:nth-child(4)'
 
     # ROTINA
     driver.get('http://201.55.32.179/openbiblio/shared/loginform.php')
     driver.find_element(By.CSS_SELECTOR, selector_usuario).send_keys(usuario)
     driver.find_element(By.CSS_SELECTOR, selector_senha).send_keys(senha)
     driver.find_element(By.CSS_SELECTOR, selector_botao_login).click()
-    driver.find_element(By.CSS_SELECTOR, selector_guia_catalogo).click()
 
     for item in tombos:
         print(item)
+        driver.get('http://201.55.32.179/openbiblio/catalog/index.php')
+
         driver.find_element(
-            By.CSS_SELECTOR, selector_codigo_de_barras).send_keys(item)
-        driver.find_element(By.CSS_SELECTOR, selector_botao_pesquisar).click()
+            By.CSS_SELECTOR,
+            selector_codigo_de_barras
+        ).send_keys(item)
+
+        driver.find_element(
+            By.CSS_SELECTOR,
+            selector_botao_pesquisar
+        ).click()
 
         if checar_lista():
             lista.append(varrer_dados(item))
@@ -144,15 +149,13 @@ try:
 
                 for link in livros:
                     links.append(link.get_attribute('href'))
-                
-                if checar_livro(links, item):
-                    lista.append(varrer_dados(item))
-                    pass                
+
+                checar_livro(links, item, lista)
 
             else:
                 lista.append(['NÃO ENCONTRADO', '', '', '', '', item, ''])
 
-        driver.find_element(By.CSS_SELECTOR, selector_guia_pesquisa).click()
+        driver.get('http://201.55.32.179/openbiblio/catalog/index.php')
 
     dataframe = pandas.DataFrame(lista)
     dataframe.to_csv('descartes.csv', index=False, header=False)
