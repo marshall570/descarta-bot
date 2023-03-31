@@ -17,6 +17,7 @@ def checar_lista():
         return False
     return True
 
+
 def checar_paginas(item):
     try:
         driver.find_element(
@@ -47,46 +48,32 @@ def checar_livro(links, tombo, lista):
 
 
 def varrer_dados(tombo):
-    try:
-        titulo = str(driver.find_element(
-            By.XPATH,
-            '//*[contains(text(),"Título:")]/following-sibling::*'
-        ).get_attribute('textContent').strip().replace('\n', ''))
+    xpath = [
+        '//*[contains(text(),"Título:")]/following-sibling::*',
+        '//*[contains(text(),"Personal name:")]/following-sibling::*',
+        '//*[contains(text(),"Name of publisher, distributor, etc.:")]/following-sibling::*',
+        '//*[contains(text(),"Date of publication, distribution, etc.:")]/following-sibling::*',
+        '//*[contains(text(),"Topical term or geographic name as entry element:")]/following-sibling::*',
+        '//*[contains(text(),"International Standard Book Number:")]/following-sibling::*',
+        f'//*[contains(text(), "{tombo}")]/following-sibling::*'
+    ]
+    valores = [tombo]
 
-        autor = str(driver.find_element(
-            By.XPATH,
-            '//*[contains(text(),"Personal name:")]/following-sibling::*'
-        ).get_attribute('textContent').strip().replace('\n', ''))
+    for campo in xpath:
+        try:
+            valor = driver.find_element(
+                By.XPATH,
+                campo
+            ).get_attribute('textContent').strip().replace('\n', '')
+            
+            valores.append(valor)
 
-        editora = str(driver.find_element(
-            By.XPATH,
-            '//*[contains(text(),"Name of publisher, distributor, etc.:")]/following-sibling::*'
-        ).get_attribute('textContent').strip().replace('\n', ''))
+        except NoSuchElementException:
+            valores.append('---ERRO---')
 
-        ano = str(driver.find_element(
-            By.XPATH,
-            '//*[contains(text(),"Date of publication, distribution, etc.:")]/following-sibling::*'
-        ).get_attribute('textContent').strip().replace('\n', ''))
+    return valores
 
-        isbn = str(driver.find_element(
-            By.XPATH,
-            '//*[contains(text(),"International Standard Book Number:")]/following-sibling::*'
-        ).get_attribute('textContent').strip())
-
-        item = str(tombo)
-
-        exemplar = str(driver.find_element(
-            By.XPATH,
-            f'//*[contains(text(), "{item}")]/following-sibling::*'
-        ).get_attribute('textContent').strip().replace('\n', ''))
-
-        return [titulo, autor, editora, ano, isbn, tombo, exemplar]
-
-    except NoSuchElementException:
-        return ['--- ERRO NA VARREDURA ---', '', '', '', '', item, '']
-
-
-lista = [['TITULO', 'AUTOR', 'EDITORA', 'ANO', 'ISBN', 'TOMBO', 'EXEMPLAR']]
+lista = [['TOMBO', 'TITULO', 'AUTOR', 'EDITORA', 'ANO', 'ASSUNTO','ISBN', 'EXEMPLAR']]
 
 # DRIVER
 options = Options()
@@ -116,14 +103,14 @@ try:
     selector_botao_pesquisar = 'body > table:nth-child(3) > tbody > tr:nth-child(3) > td:nth-child(5) > font.primary > form:nth-child(3) > table > tbody > tr:nth-child(2) > td > input.button'
 
     # ROTINA
-    driver.get('http://201.55.32.179/openbiblio/shared/loginform.php')
+    driver.get('http://biblioteca.fateczl.edu.br/openbiblio/shared/loginform.php')
     driver.find_element(By.CSS_SELECTOR, selector_usuario).send_keys(usuario)
     driver.find_element(By.CSS_SELECTOR, selector_senha).send_keys(senha)
     driver.find_element(By.CSS_SELECTOR, selector_botao_login).click()
 
     for item in tombos:
         print(item)
-        driver.get('http://201.55.32.179/openbiblio/catalog/index.php')
+        driver.get('http://biblioteca.fateczl.edu.br/openbiblio/catalog/index.php')
 
         driver.find_element(
             By.CSS_SELECTOR,
@@ -153,18 +140,18 @@ try:
                 checar_livro(links, item, lista)
 
             else:
-                lista.append(['NÃO ENCONTRADO', '', '', '', '', item, ''])
+                lista.append([item, '--- NÃO ENCONTRADO ---', '', '', '', '', '', ''])
 
-        driver.get('http://201.55.32.179/openbiblio/catalog/index.php')
+        driver.get('http://biblioteca.fateczl.edu.br/openbiblio/catalog/index.php')
 
     dataframe = pandas.DataFrame(lista)
-    dataframe.to_csv('descartes.csv', index=False, header=False)
+    dataframe.to_csv('resultados.csv', index=False, header=False)
 
     driver.find_element(By.CSS_SELECTOR, selector_botao_logout).click()
     driver.quit()
 
 except Exception as error:
     dataframe = pandas.DataFrame(lista)
-    dataframe.to_csv('descartes.csv', index=False, header=False)
+    dataframe.to_csv('resultados.csv', index=False, header=False)
     driver.quit()
     print(error)
